@@ -49,9 +49,14 @@ class Orchestrator:
         # Initialize agents (will set LLM service later)
         self.planner = None
         self.codegen = None
-        self.reviewer = None
         self.testwriter = None
         self.explainer = None
+        self.reviewer = None
+
+        # Multi-model support
+        self.multi_model_enabled = False
+        self.multi_model_manager = None
+        self.multi_model_orchestrator = None
     
     def _initialize_reviewer(self):
         """Initialize the Reviewer agent."""
@@ -59,6 +64,15 @@ class Orchestrator:
             from .agents import ReviewerAgent
             github_token = config.get("GitHub", "token")
             self.reviewer = ReviewerAgent(self.llm_service, github_token)
+
+    def enable_multi_model(self):
+        """Enable multi-model configuration."""
+        from .multi_model import MultiModelManager, MultiModelOrchestrator
+        self.multi_model_manager = MultiModelManager()
+        self.multi_model_orchestrator = MultiModelOrchestrator(self)
+        self.multi_model_orchestrator.configure_agents_with_multi_model()
+        self.multi_model_enabled = True
+        logger.info("Multi-model configuration enabled")
 
     def init_project(self, project_name: str, budget: float) -> bool:
         """Initialize a new project.
