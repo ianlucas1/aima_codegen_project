@@ -72,6 +72,13 @@ log_backup_count = 3
 # openai_api_key =
 # anthropic_api_key =
 # google_api_key =
+
+[GitHub]
+# GitHub integration settings
+token = 
+auto_pr = false
+auto_merge = false
+webhook_url =
 """
 
 DEFAULT_MODEL_COSTS = {
