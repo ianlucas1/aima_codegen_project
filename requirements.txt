@@ -11,5 +11,13 @@ packaging
 pytest
 pytest-cov
 pytest-mock
-setuptools python-dotenv
+setuptools
 python-dotenv
+
+# GitHub integration
+requests
+PyGithub
+
+# Additional utilities
+python-dateutil
+gitpython
