@@ -1,0 +1,10 @@
+typer
+rich
+openai
+anthropic
+google-generativeai
+tiktoken
+keyring
+pydantic
+psutil
+packaging

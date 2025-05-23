@@ -1,0 +1,15 @@
+typer
+rich
+openai
+anthropic
+google-generativeai
+tiktoken
+keyring
+pydantic
+psutil
+packaging
+pytest
+pytest-cov
+pytest-mock
+setuptools python-dotenv
+python-dotenv
