@@ -271,3 +271,4 @@ class GitOperations:
             return result.stdout.strip()
         except subprocess.CalledProcessError:
             return None
+        
