@@ -152,6 +152,12 @@ def config_cmd(
     else:
         console.print("[yellow]Usage: config --set Section.key --value value OR config --get Section.key[/yellow]")
 
+@app.command()
+def gui():
+    """Launch the graphical user interface."""
+    from aima_codegen.gui import launch_gui
+    launch_gui()
+
 @app.callback()
 def main():
     """AI Multi-Agent Coding Assistant - Generate Python projects with AI agents."""
