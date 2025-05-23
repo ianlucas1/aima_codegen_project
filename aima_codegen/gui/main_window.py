@@ -189,7 +189,31 @@ class AIMACodeGenGUI:
         
         ttk.Button(review_frame, text="Manual Review", 
                   command=self._manual_review).pack(anchor=tk.W, pady=5)
+
+    # Agent-specific model selection
+        agent_models_frame = ttk.LabelFrame(panel, text="Agent Model Configuration", padding="5")
+        agent_models_frame.pack(fill=tk.X, pady=10)
         
+        # Create dropdowns for each agent
+        agents = ["Planner", "CodeGen", "TestWriter", "Reviewer"]
+        self.agent_model_vars = {}
+        
+        for i, agent in enumerate(agents):
+            ttk.Label(agent_models_frame, text=f"{agent} Agent:").grid(row=i, column=0, sticky=tk.W, padx=5, pady=3)
+            
+            model_var = tk.StringVar(value="Default")
+            self.agent_model_vars[agent] = model_var
+            
+            # Model dropdown
+            model_combo = ttk.Combobox(
+                agent_models_frame, 
+                textvariable=model_var,
+                values=["Default", "gpt-4-turbo", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet", "gemini-pro"],
+                width=25,
+                state="readonly"
+            )
+            model_combo.grid(row=i, column=1, padx=5, pady=3)
+
     def _create_status_panel(self, parent):
         """Create status and logging panel."""
         panel = ttk.LabelFrame(parent, text="Status & Logs", padding="10")
@@ -353,8 +377,38 @@ class AIMACodeGenGUI:
 
     def _configure_multi_model(self):
         """Configure multi-model strategy."""
-        # This will be implemented in the next section
-        pass
+        if not self.orchestrator.multi_model_enabled:
+            self.orchestrator.enable_multi_model()
+        
+        # Apply agent model configurations from dropdowns
+        for agent, model_var in self.agent_model_vars.items():
+            model = model_var.get()
+            if model != "Default":
+                # Map model names to actual model identifiers
+                model_map = {
+                    "gpt-4-turbo": "gpt-4-turbo-preview",
+                    "gpt-3.5-turbo": "gpt-3.5-turbo",
+                    "claude-3-opus": "claude-3-opus-20240229",
+                    "claude-3-sonnet": "claude-3-sonnet-20240229",
+                    "gemini-pro": "gemini-pro"
+                }
+                
+                # Determine provider from model
+                if model.startswith("gpt"):
+                    provider = "OpenAI"
+                elif model.startswith("claude"):
+                    provider = "Anthropic"
+                elif model.startswith("gemini"):
+                    provider = "Google"
+                else:
+                    provider = "OpenAI"  # Default
+                
+                # Update agent configuration
+                self.orchestrator.multi_model_manager.update_agent_config(
+                    agent, 
+                    provider=provider,
+                    model=model_map.get(model, model)
+                )
     
     def _run_code_review(self, github_integration: bool):
         """Run code review process."""
