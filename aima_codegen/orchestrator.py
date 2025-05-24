@@ -64,6 +64,17 @@ class Orchestrator:
             from .agents import ReviewerAgent
             github_token = config.get("GitHub", "token")
             self.reviewer = ReviewerAgent(self.llm_service, github_token)
+    
+    def _setup_agent_telemetry(self):
+        """Set up telemetry logging for all agents."""
+        agents = [self.planner, self.codegen, self.testwriter, self.explainer]
+        if self.reviewer:
+            agents.append(self.reviewer)
+        
+        for agent in agents:
+            if agent and hasattr(agent, 'set_project_path'):
+                agent.set_project_path(self.project_path)
+                agent.enable_telemetry(True)
 
     def enable_multi_model(self):
         """Enable multi-model configuration."""
@@ -163,6 +174,10 @@ class Orchestrator:
         self.venv_manager = VEnvManager(self.project_path)
         self.budget_tracker = BudgetTracker(self.project_state.total_budget_usd)
         self.budget_tracker.current_spent = self.project_state.current_spent_usd
+        
+        # Set up telemetry for any existing agents
+        if self.planner:  # Agents might be initialized already
+            self._setup_agent_telemetry()
         
         self.console.print(f"[green]✓ Project '{project_name}' loaded successfully![/green]")
         return True
@@ -391,6 +406,10 @@ class Orchestrator:
             self.testwriter = TestWriterAgent(self.llm_service)
             self.explainer = ExplainerAgent(self.llm_service)
             self._initialize_reviewer()
+            
+            # Set up telemetry logging for agents
+            if self.project_path:
+                self._setup_agent_telemetry()
             
             # Update project state
             if self.project_state:

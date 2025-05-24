@@ -22,6 +22,33 @@ class TestWriterAgent(BaseAgent):
         source_code = context.get("source_code", "")
         project_context = context.get("project_context", "")
         revision_feedback = context.get("revision_feedback", None)
+        decision_points = []
+        
+        # Track decision point: Test generation strategy
+        strategy = "Comprehensive" if len(source_code) > 500 else "Focused"
+        decision_points.append(self.track_decision_point(
+            description="Test coverage strategy",
+            options=["Comprehensive", "Focused", "Minimal"],
+            chosen=strategy,
+            reasoning=f"Source code size: {len(source_code)} chars"
+        ))
+        
+        # Track decision point: Test framework selection
+        decision_points.append(self.track_decision_point(
+            description="Test framework choice",
+            options=["pytest", "unittest", "mixed"],
+            chosen="pytest",
+            reasoning="Consistent with project standards and more flexible"
+        ))
+        
+        # Track decision point: Revision handling
+        if revision_feedback:
+            decision_points.append(self.track_decision_point(
+                description="Revision approach",
+                options=["Fix failing tests", "Rewrite tests", "Add missing tests"],
+                chosen="Fix failing tests",
+                reasoning="Address specific feedback while maintaining coverage"
+            ))
         
         # Build structured prompt
         prompt = self._build_prompt(waypoint, source_code, project_context, revision_feedback)
@@ -40,26 +67,67 @@ class TestWriterAgent(BaseAgent):
         )
         
         # Parse test code from response
+        confidence_level = 0.8  # High confidence for test generation
+        result = None
+        
         try:
-            result = json.loads(response.content)
+            parsed_result = json.loads(response.content)
             
-            return {
+            # Track decision point: Test validation
+            num_test_files = len(parsed_result.get("code", {}))
+            has_pytest_dep = "pytest" in parsed_result.get("dependencies", [])
+            decision_points.append(self.track_decision_point(
+                description="Test output validation",
+                options=["Accept tests", "Request more coverage", "Regenerate"],
+                chosen="Accept tests",
+                reasoning=f"Generated {num_test_files} test files, pytest included: {has_pytest_dep}"
+            ))
+            
+            confidence_level = 0.9  # High confidence for successful test generation
+            result = {
                 "success": True,
-                "code": result.get("code", {}),
-                "dependencies": result.get("dependencies", []),
+                "code": parsed_result.get("code", {}),
+                "dependencies": parsed_result.get("dependencies", []),
                 "tokens_used": response.prompt_tokens + response.completion_tokens,
                 "cost": response.cost
             }
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse TestWriter response: {e}")
-            return {
+            confidence_level = 0.2  # Low confidence due to parsing failure
+            decision_points.append(self.track_decision_point(
+                description="JSON parsing failure",
+                options=["Retry", "Manual test creation", "Skip tests"],
+                chosen="Retry",
+                reasoning=f"JSON parsing failed: {str(e)}"
+            ))
+            
+            result = {
                 "success": False,
                 "error": "Failed to parse generated tests",
                 "raw_content": response.content,
                 "tokens_used": response.prompt_tokens + response.completion_tokens,
                 "cost": response.cost
             }
+        
+        # Log comprehensive telemetry
+        self.log_agent_telemetry(
+            context=context,
+            llm_response=response,
+            result=result,
+            decision_points=decision_points,
+            confidence_level=confidence_level
+        )
+        
+        # Generate post-task debrief
+        debrief = self.generate_debrief(
+            context=context,
+            result=result,
+            decision_points=decision_points,
+            confidence_level=confidence_level
+        )
+        
+        return result
     
     def _build_prompt(self, waypoint, source_code: str, project_context: str,
                      revision_feedback: Optional[RevisionFeedback]) -> str:
