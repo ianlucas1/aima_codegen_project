@@ -1,0 +1,24 @@
+typer
+rich
+openai
+anthropic
+google-generativeai
+tiktoken
+keyring
+pydantic
+psutil
+packaging
+pytest
+pytest-cov
+pytest-mock
+setuptools
+python-dotenv
+
+# GitHub integration
+requests
+PyGithub
+
+# Additional utilities
+python-dateutil
+gitpython
+flake8

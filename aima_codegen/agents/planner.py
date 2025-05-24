@@ -80,16 +80,38 @@ Example:
         response = self.call_llm(
             messages=messages,
             temperature=0.7,
-            max_tokens=2000,
+            max_tokens=20000,
             model=context.get("model")
         )
         
+        # Add this debug line:
+        logger.info(f"Planner LLM response: {response.content[:500] if response.content else 'EMPTY'}")
+
+        # Around line 90-95, after the logger.info line, add this before the try block:
+
+        # Extract JSON from markdown code blocks if present
+        content = response.content
+        if content.startswith("```"):
+            # Find the JSON content between code blocks
+            lines = content.split('\n')
+            json_lines = []
+            in_json_block = False
+            for line in lines:
+                if line.strip().startswith("```json"):
+                    in_json_block = True
+                    continue
+                elif line.strip() == "```" and in_json_block:
+                    break
+                elif in_json_block:
+                    json_lines.append(line)
+            content = '\n'.join(json_lines)
+
         # Parse waypoints from response
         confidence_level = 0.8  # High confidence for structured planning
         result = None
         
         try:
-            waypoints_data = json.loads(response.content)
+            waypoints_data = json.loads(content)
             waypoints = []
             
             # Track decision point: Waypoint validation

@@ -317,10 +317,10 @@ use_preset("balanced")
 **Goal**: Optimal quality/cost ratio
 ```json
 {
-  "Planner": {"model": "claude-opus-4-20250514", "provider": "Anthropic"},
+  "Planner": {"model": "o3-2025-04-16", "provider": "OpenAI"},
   "CodeGen": {"model": "gemini-2.5-flash-preview-05-20", "provider": "Google"},
   "TestWriter": {"model": "claude-sonnet-4-20250514", "provider": "Anthropic"},
-  "Reviewer": {"model": "claude-sonnet-4-20250514", "provider": "Anthropic"}
+  "Reviewer": {"model": "gemini-2.5-pro-preview-05-06", "provider": "Google"}
 }
 ```
 **Cost**: ~$2-5 per waypoint

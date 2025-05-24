@@ -192,9 +192,9 @@ class Orchestrator:
         
         # Update initial prompt and budget if provided
         self.project_state.initial_prompt = prompt
-        if budget > 0:
-            self.project_state.total_budget_usd = budget
-            self.budget_tracker = BudgetTracker(budget)
+        if not self.budget_tracker:
+            self.budget_tracker = BudgetTracker(self.project_state.total_budget_usd)
+            self.budget_tracker.current_spent = self.project_state.current_spent_usd
         
         # Setup LLM service
         if not self._setup_llm_service(provider, model):
@@ -657,44 +657,97 @@ class Orchestrator:
         # Build project context
         context_parts = []
         
-        # 1. Include requirements.txt
-        req_path = waypoint_dir / "src" / "requirements.txt"
-        if req_path.exists():
-            context_parts.append(f"=== requirements.txt ===\n{req_path.read_text()}")
-        
-        # 2. Include files mentioned in waypoint description
-        # Simple heuristic: look for .py filenames in description
-        import re
-        mentioned_files = re.findall(r'(\w+\.py)', waypoint.description)
-        for filename in mentioned_files:
-            file_path = waypoint_dir / "src" / filename
-            if file_path.exists():
-                context_parts.append(f"=== {filename} ===\n{file_path.read_text()}")
-        
-        # 3. For TestWriter, include source files being tested
-        if waypoint.agent_type == "TestWriter":
-            # Look for source files that might be tested
-            src_dir = waypoint_dir / "src"
-            for py_file in src_dir.glob("*.py"):
-                if py_file.name != "__init__.py" and not py_file.name.startswith("test_"):
-                    content = py_file.read_text()
-                    if len(content.encode()) <= 8192:  # 8KB limit
-                        context_parts.append(f"=== {py_file.name} ===\n{content}")
-        
-        # 4. Fallback: include all Python files under 8KB
-        if waypoint.agent_type == "CodeGen" and len(context_parts) < 2:
-            logger.warning("WARNING: Using 8KB fallback context strategy. Including all *.py files under 8KB.")
-            src_dir = waypoint_dir / "src"
-            for py_file in src_dir.glob("**/*.py"):
-                if py_file.stat().st_size <= 8192:
-                    content = py_file.read_text()
-                    context_parts.append(f"=== {py_file.relative_to(src_dir)} ===\n{content}")
-                else:
-                    # File too large - abort
-                    logger.error(f"ERROR: File '{py_file}' exceeds 8 KB fallback limit. "
-                               "Suggestion: Refactor the file or increase the limit in config.ini.")
-                    waypoint.status = "FAILED_TOOLING_ERROR"
-                    raise ToolingError(f"File '{py_file}' exceeds 8 KB fallback limit")
+        # For test-fixing waypoints, include test files instead of source files
+        if "test" in waypoint.description.lower() and "fix" in waypoint.description.lower():
+            # Include test files for analysis
+            test_dir = waypoint_dir / "src" / "tests"
+            if test_dir.exists():
+                for test_file in test_dir.glob("test_*.py"):
+                    test_content = test_file.read_text()
+                    if len(test_content) < 8192:  # Limit individual file size
+                        context_parts.append(f"=== {test_file.name} ===\n{test_content}")
+            
+            # Include requirements.txt
+            req_path = waypoint_dir / "src" / "requirements.txt"
+            if req_path.exists():
+                context_parts.append(f"=== requirements.txt ===\n{req_path.read_text()}")
+            
+            # Include a summary of the project structure instead of all files
+            context_parts.extend([
+                "=== Project Structure ===",
+                "aima_codegen/",
+                "├── agents/",
+                "│   ├── base.py",
+                "│   ├── planner.py",
+                "│   ├── codegen.py",
+                "│   ├── testwriter.py",
+                "│   ├── explainer.py",
+                "│   └── reviewer.py",
+                "├── llm/",
+                "│   ├── interface.py",
+                "│   ├── openai_adapter.py",
+                "│   ├── anthropic_adapter.py",
+                "│   └── google_adapter.py",
+                "├── orchestrator.py",
+                "├── budget.py",
+                "├── state.py",
+                "└── tests/",
+                "    ├── test_agents.py",
+                "    ├── test_budget.py",
+                "    ├── test_llm.py",
+                "    ├── test_orchestrator.py",
+                "    ├── test_state.py",
+                "    └── test_venv.py"
+            ])
+            
+        else:
+            # Original logic for other waypoints
+            # 1. Include requirements.txt
+            req_path = waypoint_dir / "src" / "requirements.txt"
+            if req_path.exists():
+                context_parts.append(f"=== requirements.txt ===\n{req_path.read_text()}")
+            
+            # 2. Include files mentioned in waypoint description
+            import re
+            mentioned_files = re.findall(r'(\w+\.py)', waypoint.description)
+            for filename in mentioned_files:
+                file_path = waypoint_dir / "src" / filename
+                if file_path.exists():
+                    context_parts.append(f"=== {filename} ===\n{file_path.read_text()}")
+            
+            # 3. For TestWriter, include source files being tested
+            if waypoint.agent_type == "TestWriter":
+                # Look for source files that might be tested
+                src_dir = waypoint_dir / "src"
+                total_size = 0
+                max_context_size = 30000  # Leave room for prompt
+                
+                for py_file in src_dir.glob("*.py"):
+                    if py_file.name != "__init__.py" and not py_file.name.startswith("test_"):
+                        file_content = py_file.read_text()
+                        file_size = len(file_content)
+                        
+                        # Check if adding this file would exceed our limit
+                        if total_size + file_size > max_context_size:
+                            context_parts.append(f"=== {py_file.name} ===\n[File too large - {file_size} chars]")
+                        else:
+                            context_parts.append(f"=== {py_file.name} ===\n{file_content}")
+                            total_size += file_size
+            
+            # 4. Fallback: include all Python files under size limit
+            if waypoint.agent_type == "CodeGen" and len(context_parts) < 2:
+                logger.warning("WARNING: Using size-limited fallback context strategy.")
+                src_dir = waypoint_dir / "src"
+                total_size = 0
+                max_context_size = 30000
+                
+                for py_file in src_dir.glob("**/*.py"):
+                    if py_file.stat().st_size <= 8192:
+                        file_content = py_file.read_text()
+                        if total_size + len(file_content) > max_context_size:
+                            break
+                        context_parts.append(f"=== {py_file.relative_to(src_dir)} ===\n{file_content}")
+                        total_size += len(file_content)
         
         # 5. Include user's original prompt
         context_parts.append(f"=== Original Requirements ===\n{self.project_state.initial_prompt}")
@@ -981,7 +1034,12 @@ Regenerate the *entire* response in the correct JSON format, ensuring all struct
 
         # Create symlink from project src to aima_codegen
         src_path = self.project_path / "src"
-        src_path.rmdir()  # Remove empty dir
+        
+        # Use shutil.rmtree to remove the entire directory tree
+        if src_path.exists():
+            shutil.rmtree(src_path)
+        
+        # Now create the symlink
         src_path.symlink_to(package_path)
 
         # Add safety file

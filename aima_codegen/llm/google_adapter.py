@@ -57,12 +57,26 @@ class GoogleAdapter(LLMServiceInterface):
                     )
                 )
                 
-                # Count tokens
+                # Count tokens - use metadata when available
                 prompt_tokens = model.count_tokens(prompt).total_tokens
-                completion_tokens = model.count_tokens(response.text).total_tokens
-                
+
+                # Handle MAX_TOKENS case where response.text is not available
+                try:
+                    response_text = response.text
+                    completion_tokens = model.count_tokens(response_text).total_tokens
+                except ValueError as e:
+                    # Response hit token limit, return empty string
+                    response_text = ""
+                    # Use total tokens from metadata minus prompt tokens
+                    if hasattr(response, 'usage_metadata'):
+                        total_tokens = response.usage_metadata.total_token_count
+                        completion_tokens = total_tokens - prompt_tokens
+                    else:
+                        completion_tokens = 0
+                    logger.warning(f"Gemini hit token limit, response truncated")
+
                 return LLMResponse(
-                    content=response.text,
+                    content=response_text,
                     prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens,
                     cost=0.0,  # Will be calculated by BudgetTracker
