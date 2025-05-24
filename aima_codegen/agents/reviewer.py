@@ -19,7 +19,7 @@ SECURITY_PATTERNS = {
     "sql_injection": [
         r"execute\s*\(\s*['\"].*%.*['\"]",  # String formatting in SQL
         r"cursor\.execute\s*\(\s*f['\"]",   # f-strings in SQL
-        r"execute\s*\(\s*[\"'].*\+.*[\"']", # String concatenation in SQL
+        r"execute\s*\(\s*[\"'].*\+.*[\"']",  # String concatenation in SQL
     ],
     "path_traversal": [
         r"open\s*\(\s*.*\+.*\)",           # Path concatenation
