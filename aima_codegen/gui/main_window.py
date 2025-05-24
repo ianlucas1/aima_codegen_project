@@ -194,9 +194,24 @@ class AIMACodeGenGUI:
         agent_models_frame = ttk.LabelFrame(panel, text="Agent Model Configuration", padding="5")
         agent_models_frame.pack(fill=tk.X, pady=10)
         
-        # Create dropdowns for each agent
-        agents = ["Planner", "CodeGen", "TestWriter", "Reviewer"]
+        # Create dropdowns for each agent (including Explainer)
+        agents = ["Planner", "CodeGen", "TestWriter", "Reviewer", "Explainer"]
         self.agent_model_vars = {}
+        
+        # Actual frontier models available in the system
+        model_options = [
+            "Default",
+            # OpenAI models
+            "gpt-4.1-2025-04-14",
+            "o3-2025-04-16",
+            "o4-mini-2025-04-16",
+            # Anthropic models
+            "claude-opus-4-20250514",
+            "claude-sonnet-4-20250514",
+            # Google models
+            "gemini-2.5-pro-preview-05-06",
+            "gemini-2.5-flash-preview-05-20"
+        ]
         
         for i, agent in enumerate(agents):
             ttk.Label(agent_models_frame, text=f"{agent} Agent:").grid(row=i, column=0, sticky=tk.W, padx=5, pady=3)
@@ -208,8 +223,8 @@ class AIMACodeGenGUI:
             model_combo = ttk.Combobox(
                 agent_models_frame, 
                 textvariable=model_var,
-                values=["Default", "gpt-4-turbo", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet", "gemini-pro"],
-                width=25,
+                values=model_options,
+                width=35,  # Wider to accommodate longer model names
                 state="readonly"
             )
             model_combo.grid(row=i, column=1, padx=5, pady=3)
@@ -384,17 +399,19 @@ class AIMACodeGenGUI:
         for agent, model_var in self.agent_model_vars.items():
             model = model_var.get()
             if model != "Default":
-                # Map model names to actual model identifiers
+                # Map model names - now using actual model names, no mapping needed
                 model_map = {
-                    "gpt-4-turbo": "gpt-4-turbo-preview",
-                    "gpt-3.5-turbo": "gpt-3.5-turbo",
-                    "claude-3-opus": "claude-3-opus-20240229",
-                    "claude-3-sonnet": "claude-3-sonnet-20240229",
-                    "gemini-pro": "gemini-pro"
+                    "gpt-4.1-2025-04-14": "gpt-4.1-2025-04-14",
+                    "o3-2025-04-16": "o3-2025-04-16",
+                    "o4-mini-2025-04-16": "o4-mini-2025-04-16",
+                    "claude-opus-4-20250514": "claude-opus-4-20250514",
+                    "claude-sonnet-4-20250514": "claude-sonnet-4-20250514",
+                    "gemini-2.5-pro-preview-05-06": "gemini-2.5-pro-preview-05-06",
+                    "gemini-2.5-flash-preview-05-20": "gemini-2.5-flash-preview-05-20"
                 }
                 
                 # Determine provider from model
-                if model.startswith("gpt"):
+                if model.startswith("gpt") or model.startswith("o3") or model.startswith("o4"):
                     provider = "OpenAI"
                 elif model.startswith("claude"):
                     provider = "Anthropic"
