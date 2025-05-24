@@ -87,11 +87,9 @@ Example:
         # Add this debug line:
         logger.info(f"Planner LLM response: {response.content[:500] if response.content else 'EMPTY'}")
 
-        # Around line 90-95, after the logger.info line, add this before the try block:
-
         # Extract JSON from markdown code blocks if present
         content = response.content
-        if content.startswith("```"):
+        if "```json" in content:
             # Find the JSON content between code blocks
             lines = content.split('\n')
             json_lines = []
@@ -123,10 +121,16 @@ Example:
             ))
             
             for wp_data in waypoints_data:
+                # Validate agent_type
+                agent_type = wp_data.get("agent_type", "")
+                if agent_type not in ["CodeGen", "TestWriter"]:
+                    logger.warning(f"Invalid agent_type '{agent_type}' for waypoint {wp_data.get('id', 'unknown')}, defaulting to CodeGen")
+                    agent_type = "CodeGen"
+                
                 waypoint = Waypoint(
                     id=wp_data["id"],
                     description=wp_data["description"],
-                    agent_type=wp_data["agent_type"],
+                    agent_type=agent_type,
                     status="PENDING"
                 )
                 waypoints.append(waypoint)

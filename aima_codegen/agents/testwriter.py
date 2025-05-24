@@ -79,6 +79,13 @@ class TestWriterAgent(BaseAgent):
                 raw_content = re.sub(r'\n```\s*$', '', raw_content)
             parsed_result = json.loads(raw_content)
             
+            # Ensure pytest is in dependencies
+            dependencies = parsed_result.get("dependencies", [])
+            if "pytest" not in dependencies:
+                logger.info("Adding pytest to dependencies as it was missing")
+                dependencies.append("pytest")
+                parsed_result["dependencies"] = dependencies
+            
             # Track decision point: Test validation
             num_test_files = len(parsed_result.get("code", {}))
             has_pytest_dep = "pytest" in parsed_result.get("dependencies", [])
@@ -88,6 +95,8 @@ class TestWriterAgent(BaseAgent):
                 chosen="Accept tests",
                 reasoning=f"Generated {num_test_files} test files, pytest included: {has_pytest_dep}"
             ))
+            
+            logger.info(f"Generated {num_test_files} test files with {len(dependencies)} dependencies")
             
             confidence_level = 0.9  # High confidence for successful test generation
             result = {

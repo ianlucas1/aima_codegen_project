@@ -26,6 +26,10 @@ class CodeGenAgent(BaseAgent):
         revision_feedback = context.get("revision_feedback", None)
         decision_points = []
         
+        logger.info(f"Starting code generation for waypoint: {waypoint.id}")
+        logger.debug(f"Waypoint description: {waypoint.description}")
+        logger.debug(f"Project context size: {len(project_context)} chars")
+        
         # Track decision point: Code generation approach
         approach = "Revision" if revision_feedback else "Initial generation"
         decision_points.append(self.track_decision_point(
@@ -34,6 +38,21 @@ class CodeGenAgent(BaseAgent):
             chosen=approach,
             reasoning=f"{'Addressing feedback' if revision_feedback else 'Fresh implementation'}"
         ))
+        
+        if revision_feedback:
+            # Log revision feedback details
+            feedback_parts = []
+            if revision_feedback.pytest_output:
+                feedback_parts.append("pytest failures")
+            if revision_feedback.flake8_output:
+                feedback_parts.append("flake8 issues")
+            if revision_feedback.syntax_error:
+                feedback_parts.append("syntax errors")
+            
+            if feedback_parts:
+                logger.info(f"Processing revision feedback with: {', '.join(feedback_parts)}")
+            else:
+                logger.info("Processing revision feedback (no specific issues reported)")
         
         # Track decision point: Template selection
         has_context = len(project_context) > 100
@@ -46,12 +65,14 @@ class CodeGenAgent(BaseAgent):
         
         # Build structured prompt
         prompt = self._build_prompt(waypoint, project_context, revision_feedback)
+        logger.debug(f"Generated prompt size: {len(prompt)} chars")
         
         messages = [
             {"role": "system", "content": "You are an expert Python developer."},
             {"role": "user", "content": prompt}
         ]
         
+        logger.info("Calling LLM for code generation")
         # Get response from LLM
         response = self.call_llm(
             messages=messages,
@@ -60,22 +81,31 @@ class CodeGenAgent(BaseAgent):
             model=context.get("model")
         )
         
+        logger.info(f"LLM response received: {response.prompt_tokens + response.completion_tokens} tokens")
+        
         # Parse code and dependencies from response
         confidence_level = 0.7  # Moderate confidence for code generation
         result = None
         
         try:
             parsed_result = json.loads(response.content)
+            logger.debug("Successfully parsed JSON response")
             
             # Track decision point: Output validation
             num_files = len(parsed_result.get("code", {}))
             num_deps = len(parsed_result.get("dependencies", []))
+            logger.info(f"Generated {num_files} files with {num_deps} dependencies")
+            
             decision_points.append(self.track_decision_point(
                 description="Output structure validation",
                 options=["Accept output", "Request corrections", "Manual intervention"],
                 chosen="Accept output",
                 reasoning=f"Generated {num_files} files and {num_deps} dependencies"
             ))
+            
+            # Log file details
+            for file_path, content in parsed_result.get("code", {}).items():
+                logger.debug(f"Generated file: {file_path} ({len(content)} chars)")
             
             confidence_level = 0.9  # High confidence for successful parsing
             result = {
@@ -86,8 +116,11 @@ class CodeGenAgent(BaseAgent):
                 "cost": response.cost
             }
             
+            logger.info(f"Code generation successful for waypoint {waypoint.id}")
+            
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse CodeGen response: {e}")
+            logger.debug(f"Raw response content: {response.content[:500]}...")
             confidence_level = 0.1  # Very low confidence due to parsing failure
             decision_points.append(self.track_decision_point(
                 description="JSON parsing failure",
@@ -103,6 +136,8 @@ class CodeGenAgent(BaseAgent):
                 "tokens_used": response.prompt_tokens + response.completion_tokens,
                 "cost": response.cost
             }
+            
+            logger.warning(f"Code generation failed for waypoint {waypoint.id}")
         
         # Log comprehensive telemetry
         self.log_agent_telemetry(
@@ -120,6 +155,8 @@ class CodeGenAgent(BaseAgent):
             decision_points=decision_points,
             confidence_level=confidence_level
         )
+        
+        logger.debug(f"Generated debrief with confidence level: {confidence_level}")
         
         return result
     
