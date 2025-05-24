@@ -73,7 +73,7 @@ class GoogleAdapter(LLMServiceInterface):
                         completion_tokens = total_tokens - prompt_tokens
                     else:
                         completion_tokens = 0
-                    logger.warning(f"Gemini hit token limit, response truncated")
+                    logger.warning("Gemini hit token limit, response truncated")
 
                 return LLMResponse(
                     content=response_text,

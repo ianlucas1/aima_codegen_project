@@ -353,8 +353,8 @@ class ModelPresets:
             raise ValueError(f"Unknown preset: {preset_name}")
         
         preset = presets[preset_name]
-        for agent_type, config in preset.items():
-            manager.set_agent_config(agent_type, config)
+        for agent_type, agent_config in preset.items():
+            manager.set_agent_config(agent_type, agent_config)
         
         manager.save_configurations()
         logger.info(f"Applied '{preset_name}' preset configuration")

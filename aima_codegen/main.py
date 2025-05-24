@@ -12,12 +12,12 @@ from rich.console import Console
 from rich.logging import RichHandler
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-from aima_codegen.orchestrator import Orchestrator
+from aima_codegen.orchestrator import ResilientOrchestrator
 from aima_codegen.config import config
 from aima_codegen.utils import setup_signal_handler
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Setup logging
 logging.basicConfig(
@@ -52,8 +52,8 @@ app = typer.Typer(
     add_completion=False
 )
 
-# Global orchestrator instance
-orchestrator = Orchestrator()
+# Global orchestrator instance with fault tolerance
+orchestrator = ResilientOrchestrator()
 
 # Setup graceful shutdown
 setup_signal_handler(orchestrator.cleanup)
@@ -84,7 +84,14 @@ def develop(
         typer.echo("ERROR: --prompt is required for develop command.", err=True)
         raise typer.Exit(1)
     
-    success = orchestrator.develop(prompt, budget, provider, model)
+    try:
+        success = orchestrator.develop(prompt, budget, provider, model)
+    except Exception as e:
+        logger.error(f"Unhandled exception during development: {e}")
+        from aima_codegen.error_handler import TelemetryAwareErrorHandler
+        error_handler = TelemetryAwareErrorHandler()
+        error_handler.handle_agent_error("orchestrator", e, {"action": "develop"})
+        raise typer.Exit(1)
     if not success:
         raise typer.Exit(1)
 
@@ -124,7 +131,7 @@ def config_cmd(
         if "." in set_key:
             section, key = set_key.split(".", 1)
         else:
-            console.print(f"[red]ERROR: Invalid key format. Use 'Section.key'[/red]")
+            console.print("[red]ERROR: Invalid key format. Use 'Section.key'[/red]")
             raise typer.Exit(1)
         
         try:
@@ -139,7 +146,7 @@ def config_cmd(
         if "." in get_key:
             section, key = get_key.split(".", 1)
         else:
-            console.print(f"[red]ERROR: Invalid key format. Use 'Section.key'[/red]")
+            console.print("[red]ERROR: Invalid key format. Use 'Section.key'[/red]")
             raise typer.Exit(1)
         
         value = config.get(section, key)
@@ -182,7 +189,7 @@ def improve(
 
     if feature not in improvements:
         typer.echo(f"Unknown improvement: {feature}")
-        typer.echo(f"Available: {', '.join(improvements.keys())}")
+        typer.echo("Available: {}".format(', '.join(improvements.keys())))
         raise typer.Exit(1)
 
     # Run normal development with special requirements

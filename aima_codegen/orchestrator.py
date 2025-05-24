@@ -6,11 +6,15 @@ import shutil
 import json
 import hashlib
 import logging
+import signal
+import multiprocessing
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from packaging.requirements import Requirement
 import tempfile
+from enum import Enum
 
 from rich.console import Console
 from rich.prompt import Confirm
@@ -28,9 +32,19 @@ from .exceptions import (
 )
 from .agents import PlannerAgent, CodeGenAgent, TestWriterAgent, ExplainerAgent
 from .llm import OpenAIAdapter, AnthropicAdapter, GoogleAdapter
+from .path_resolver import SymlinkAwarePathResolver
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+# Waypoint status enumeration for ResilientOrchestrator
+class WaypointStatus(Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    PARTIAL = "partial"
+    FAILED = "failed"
+    SKIPPED = "skipped"
 
 class Orchestrator:
     """Central controller managing the entire application flow."""
@@ -166,7 +180,7 @@ class Orchestrator:
         self.project_state = self.state_manager.load()
         
         if not self.project_state:
-            self.console.print(f"[red]ERROR: Failed to load project state.[/red]")
+            self.console.print("[red]ERROR: Failed to load project state.[/red]")
             remove_lock_file(self.lock_path)
             return False
         
@@ -465,7 +479,7 @@ class Orchestrator:
         
         if api_key:
             # Offer to save
-            if Confirm.ask(f"Save API key to config.ini?"):
+            if Confirm.ask("Save API key to config.ini?"):
                 self.config.set("API_Keys", config_key, api_key)
                 os.chmod(self.config.config_path, 0o600)
                 self.console.print("[green]API key saved to config.ini[/green]")
@@ -1042,7 +1056,116 @@ Regenerate the *entire* response in the correct JSON format, ensuring all struct
         # Now create the symlink
         src_path.symlink_to(package_path)
 
+        # Configure environment for symlinked project structure
+        resolver = SymlinkAwarePathResolver(self.project_path)
+        resolver.setup_python_path()
+
         # Add safety file
         (self.project_path / "SELF_IMPROVEMENT_MODE").touch()
 
         return True
+
+class ResilientOrchestrator(Orchestrator):
+    """Fault-tolerant orchestrator with partial failure handling"""
+    def __init__(self):
+        super().__init__()
+        self.waypoints: Dict[str, WaypointStatus] = {}
+        self.checkpoints = {}
+        self.stop_event = multiprocessing.Event()
+        self._setup_signal_handlers()
+
+    def _setup_signal_handlers(self):
+        """Enable graceful shutdown"""
+        signal.signal(signal.SIGTERM, self._shutdown_handler)
+        signal.signal(signal.SIGINT, self._shutdown_handler)
+
+    def _shutdown_handler(self, signum, frame):
+        logger.info(f"Received signal {signum}, initiating graceful shutdown")
+        self.stop_event.set()
+        self._save_checkpoint()
+
+    def execute_waypoint(self, waypoint_id: str, agent_func, critical=False):
+        """Execute waypoint with failure isolation"""
+        self.waypoints[waypoint_id] = WaypointStatus.RUNNING
+        try:
+            # Load checkpoint if exists
+            checkpoint_data = self.checkpoints.get(waypoint_id)
+            # Execute with timeout and monitoring
+            result = self._execute_with_circuit_breaker(agent_func, checkpoint_data, timeout=300)
+            self.waypoints[waypoint_id] = WaypointStatus.SUCCESS
+            self.checkpoints[waypoint_id] = result
+            return result
+        except Exception as e:
+            logger.error(f"Waypoint {waypoint_id} failed: {e}")
+            self.waypoints[waypoint_id] = WaypointStatus.FAILED
+            if critical:
+                logger.warning(f"Critical waypoint {waypoint_id} failed, attempting recovery")
+                return self._handle_critical_failure(waypoint_id, e)
+            else:
+                logger.info(f"Non-critical waypoint {waypoint_id} failed, continuing")
+                return None
+
+    def _execute_with_circuit_breaker(self, func, checkpoint, timeout):
+        """Execute function with circuit breaker pattern"""
+        max_retries = 3
+        retry_delay = 1
+        for attempt in range(max_retries):
+            if self.stop_event.is_set():
+                raise SystemExit("Graceful shutdown requested")
+            try:
+                # Execute in separate process with timeout
+                with multiprocessing.Pool(1) as pool:
+                    async_result = pool.apply_async(func, args=(checkpoint,))
+                    result = async_result.get(timeout=timeout)
+                    return result
+            except multiprocessing.TimeoutError:
+                logger.warning(f"Timeout on attempt {attempt + 1}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    raise
+            except Exception as e:
+                logger.error(f"Execution error on attempt {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    raise
+
+    def _handle_critical_failure(self, waypoint_id, error):
+        """Handle critical waypoint failures with compensation"""
+        # Attempt rollback of dependent waypoints
+        dependent_waypoints = self._get_dependent_waypoints(waypoint_id)
+        for dep_id in dependent_waypoints:
+            if self.waypoints.get(dep_id) == WaypointStatus.SUCCESS:
+                logger.info(f"Rolling back dependent waypoint {dep_id}")
+                self._rollback_waypoint(dep_id)
+        # Save partial progress
+        self._save_checkpoint()
+        # Return partial results if available
+        return self.checkpoints.get(waypoint_id)
+
+    def _get_dependent_waypoints(self, waypoint_id: str):
+        """Identify waypoints that depend on the given waypoint (for rollback)."""
+        # Placeholder implementation: assume no inter-dependencies
+        return []
+
+    def _rollback_waypoint(self, waypoint_id: str):
+        """Rollback changes from a successful waypoint (placeholder)."""
+        logger.debug(f"No rollback implemented for {waypoint_id}, skipping.")
+
+    def _save_checkpoint(self):
+        """Save current progress state."""
+        if self.state_manager and self.project_state:
+            self.state_manager.save(self.project_state)
+
+    def get_execution_summary(self):
+        """Get summary of execution results"""
+        return {
+            "total_waypoints": len(self.waypoints),
+            "successful": sum(1 for s in self.waypoints.values() if s == WaypointStatus.SUCCESS),
+            "failed": sum(1 for s in self.waypoints.values() if s == WaypointStatus.FAILED),
+            "partial": sum(1 for s in self.waypoints.values() if s == WaypointStatus.PARTIAL),
+            "checkpoints": len(self.checkpoints)
+        }

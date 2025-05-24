@@ -75,7 +75,6 @@ class TestWriterAgent(BaseAgent):
             # Strip markdown if present
             raw_content = response.content
             if raw_content.strip().startswith('```'):
-                import re
                 raw_content = re.sub(r'^```json\s*\n', '', raw_content.strip())
                 raw_content = re.sub(r'\n```\s*$', '', raw_content)
             parsed_result = json.loads(raw_content)
@@ -161,14 +160,14 @@ You are an expert Python test engineer. Your task is to write comprehensive pyte
 - Output MUST be valid JSON as specified
 
 """
-        
+        feedback_json_str = ""  # Initialize feedback_json_str
         if revision_feedback:
-            feedback_json = revision_feedback.model_dump_json(exclude_none=True)
-            prompt += f"""
-### REVISION FEEDBACK ###
-{{{{feedback_json}}}}
-"The previous tests failed. Fix all identified issues and ensure tests pass."
-"""
+            feedback_json_str = revision_feedback.model_dump_json(exclude_none=True)
+            prompt += (
+                "\n### REVISION FEEDBACK ###\n"
+                "{feedback_json}\n"
+                "\"The previous tests failed. Fix all identified issues and ensure tests pass.\"\n"
+            )
         
         # The JSON example with escaped braces
         prompt += """
@@ -187,8 +186,26 @@ Example:
 }}
 ```"""
         
-        return prompt.format(
-            source_code=source_code,
-            context=project_context,
-            task=waypoint.description
-        )
+        # Prepare context for formatting
+        format_context = {
+            "source_code": source_code,
+            "context": project_context,
+            "task": waypoint.description
+        }
+        if revision_feedback:
+            format_context["feedback_json"] = feedback_json_str if feedback_json_str else "{}"
+        try:
+            formatted_prompt = prompt.format(**format_context)
+        except KeyError as e:
+            logger.warning(f"Missing template variable: {e}")
+            missing_var = str(e).strip("'")
+            format_context[missing_var] = f"[MISSING: {missing_var}]"
+            # Ensure the prompt string itself is updated if it contains the missing variable placeholder directly
+            # This is a fallback, ideally the prompt string uses named placeholders like {feedback_json}
+            if f"{{{missing_var}}}" in prompt:
+                prompt = prompt.replace(f"{{{missing_var}}}", f"[MISSING: {missing_var}]")
+                formatted_prompt = prompt.format(**format_context)  # Retry formatting with updated prompt
+            else:
+                formatted_prompt = prompt.format(**format_context)  # Retry formatting if placeholder was in context only
+
+        return formatted_prompt

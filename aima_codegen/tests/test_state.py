@@ -4,6 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 from datetime import datetime
+from unittest.mock import patch, mock_open
 
 from aima_codegen.state import StateManager
 from aima_codegen.models import ProjectState, Waypoint
@@ -111,17 +112,15 @@ class TestStateManager:
         """Test temp file cleanup on save error."""
         manager = StateManager(temp_dir)
         
-        # Make directory read-only to cause save error
-        import os
-        os.chmod(temp_dir, 0o555)
-        
-        try:
-            with pytest.raises(RuntimeError):
+        # Mock os.rename to raise an error
+        with patch('os.rename') as mock_rename:
+            mock_rename.side_effect = OSError("Mock rename error")
+            
+            with pytest.raises(RuntimeError) as exc_info:
                 manager.save(project_state)
+            
+            assert "Failed to save state" in str(exc_info.value)
             
             # Verify no temp files left behind
             temp_files = list(temp_dir.glob(".project_state_*.tmp"))
             assert len(temp_files) == 0
-        finally:
-            # Restore permissions
-            os.chmod(temp_dir, 0o755)

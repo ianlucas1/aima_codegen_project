@@ -143,13 +143,12 @@ You are an expert Python developer. Your task is to write clean, efficient, PEP 
 """
         
         if revision_feedback:
-            # Add revision feedback section
-            feedback_json = revision_feedback.model_dump_json(exclude_none=True)
-            prompt += f"""
-### REVISION FEEDBACK (Optional) ###
-{{{{feedback_json}}}}
-"The previous attempt failed. Analyze the feedback above and regenerate the code for the affected files, fixing *all* identified issues. Ensure your output is valid JSON."
-"""
+            feedback_json_str = revision_feedback.model_dump_json(exclude_none=True)
+            prompt += (
+                "\n### REVISION FEEDBACK (Optional) ###\n"
+                "{feedback_json}\n"
+                "\"The previous attempt failed. Analyze the feedback above and regenerate the code for the affected files, fixing *all* identified issues. Ensure your output is valid JSON.\"\n"
+            )
         
         prompt += """
 ### OUTPUT FORMAT ###
@@ -167,7 +166,18 @@ Example:
 }}
 ```"""
         
-        return prompt.format(
-            context=project_context,
-            task=waypoint.description
-        )
+        # Prepare context and format prompt string safely
+        context = {
+            "context": project_context,
+            "task": waypoint.description
+        }
+        if revision_feedback:
+            context["feedback_json"] = feedback_json_str if feedback_json_str else "{}"
+        try:
+            formatted_prompt = prompt.format(**context)
+        except KeyError as e:
+            logger.error(f"Required variable '{e.args[0]}' not in context")
+            missing_var = e.args[0]
+            context[missing_var] = f"{{missing_{missing_var}}}"
+            formatted_prompt = prompt.format(**context)
+        return formatted_prompt

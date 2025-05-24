@@ -143,7 +143,8 @@ class TestCodeGenAgent:
         assert result["success"] is True
         # Verify that the prompt included revision feedback
         call_args = llm_service.call_llm.call_args
-        messages = call_args[1]["messages"]
+        request = call_args[0][0]  # First positional argument is the LLMRequest
+        messages = request.messages
         assert "REVISION FEEDBACK" in messages[1]["content"]
 
 
@@ -234,5 +235,6 @@ class TestExplainerAgent:
         assert result["success"] is True
         # Verify that the prompt focuses on the target
         call_args = llm_service.call_llm.call_args
-        messages = call_args[1]["messages"]
+        request = call_args[0][0]  # First positional argument is the LLMRequest
+        messages = request.messages
         assert "add function" in messages[1]["content"]
