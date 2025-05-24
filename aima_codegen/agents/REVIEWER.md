@@ -275,6 +275,7 @@ Before approving code:
 - [ ] Code is testable and maintainable
 - [ ] Performance is acceptable
 - [ ] Follows project architectural patterns
+- [ ] Adequate tests exist for new or changed functionality
 
 ## Review Response Format
 
@@ -335,4 +336,4 @@ Before approving code:
 - Learn from review outcomes
 - Update criteria based on project needs
 - Incorporate team feedback
-- Evolve with project maturity 
+- Evolve with project maturity

@@ -1,28 +1,55 @@
 # TestWriter Agent Guide
 
 ## Purpose
-The TestWriter agent generates comprehensive pytest unit tests for existing code, ensuring thorough test coverage and following testing best practices.
+The TestWriter agent generates comprehensive pytest unit tests for Python code. It ensures complete test coverage, handles edge cases, and follows pytest best practices.
 
 ## Input/Output Specifications
 
 ### Input Context
-- `waypoint`: Waypoint object describing testing requirements
+- `waypoint`: The waypoint object containing test requirements
 - `source_code`: The code to be tested
-- `project_context`: Overall project structure and context
+- `project_context`: Overall project information
 - `revision_feedback`: Optional feedback from failed test runs
 - `model`: LLM model name to use
 
 ### Output Format
 Returns a dictionary with:
-- `success`: Boolean indicating if test generation succeeded
-- `code`: Dictionary mapping test file paths to content (if successful)
-- `dependencies`: List of required testing packages
+- `success`: Boolean indicating test generation success
+- `code`: Dictionary mapping test file paths to content
+- `dependencies`: List of required packages (always includes "pytest")
 - `tokens_used`: Number of tokens consumed
 - `cost`: API call cost
-- `error`: Error message if failed
-- `raw_content`: Raw LLM response (if JSON parsing failed)
 
-## Best Practices
+## Response Parsing
+
+### Markdown Stripping
+The agent automatically handles LLM responses wrapped in markdown code blocks:
+
+1. **Detection**: Checks if response starts with ` ```json`
+2. **Extraction**: Removes opening ` ```json` and closing ` ``` ` markers
+3. **Parsing**: Processes clean JSON content
+
+This ensures compatibility with LLMs that format responses as markdown.
+
+Example handled response:
+```
+```json
+{
+  "code": {
+    "tests/test_main.py": "import pytest\n..."
+  },
+  "dependencies": ["pytest", "pytest-cov"]
+}
+```
+
+### Dependency Validation
+The agent ensures pytest is always included in dependencies:
+- Checks if "pytest" exists in the dependencies list
+- Automatically adds "pytest" if missing
+- Logs when pytest is added
+- Ensures tests can always be executed
+
+## Test Generation Guidelines
 
 ### 1. Test Structure and Organization
 - **File Naming**: Use `test_` prefix for all test files

@@ -9,6 +9,7 @@ A sophisticated AI-powered coding assistant that uses multiple specialized agent
 - **🔗 GitHub Integration**: Automated code review, pull request creation, and branch management
 - **👁️ AI Code Review**: Intelligent code analysis with the Reviewer agent before merging
 - **🧠 Self-Improvement System**: The system can now enhance its own capabilities autonomously using the `improve` command
+- **🛡️ Fault-Tolerant Orchestrator**: Enhanced core controller with partial failure isolation, error telemetry, and graceful recovery mechanisms for robust execution
 
 ## Features
 
@@ -240,26 +241,26 @@ aima-codegen config --set Section.key --value "new_value"
 
 ## Self-Improvement System
 
-AIMA CodeGen can now improve its own capabilities autonomously:
+AIMA CodeGen now possesses a robust foundation for self-improvement, including comprehensive telemetry, agent debriefs, and a safe (symlink-based) modification process. The `improve` command leverages this infrastructure to allow the system to autonomously implement new features or enhancements based on predefined tasks.
 
 ### `improve`
-Enable the system to implement enhancements to itself.
+Initiate a self-improvement task to implement new enhancements to the AIMA CodeGen system itself.
 
 ```bash
 aima-codegen improve FEATURE --budget AMOUNT
 ```
 
-Available improvements:
-- `agent-guides`: Create comprehensive documentation for each agent
-- `basic-telemetry`: Add execution logging and decision tracking
-- `debrief-system`: Implement post-task self-assessment
+This command is used for tasks like:
+- `agent-guides`: Generating or updating documentation for each agent.
+- `refactor-module`: Restructuring a specific internal module for clarity or efficiency.
+- `add-new-tool`: Integrating a new external tool or library.
+(Note: Specific FEATURE arguments depend on predefined improvement tasks available in the system.)
 
-### Features
-- **Autonomous Enhancement**: System modifies its own code safely
-- **Agent Guidelines**: Self-generated best practices documentation
-- **Telemetry Logging**: Complete execution tracking with decision reasoning
-- **Self-Assessment**: Post-task debriefs with confidence metrics
-- **Safe Modification**: Symlink-based approach prevents breaking changes
+### Core Self-Improvement Capabilities (Implemented & Active):
+- **Telemetry Logging**: All agent actions, decisions, LLM interactions, and outcomes are logged for analysis and future learning. This is an integral part of agent execution.
+- **Agent Debrief System**: After each task, agents generate a self-assessment (debrief) analyzing their performance, confidence, and potential areas for improvement. This is standard procedure.
+- **Safe Self-Modification**: When the `improve` command is used, changes to the core `aima_codegen` package are managed via a symlink-based approach. This allows the system to operate on its own codebase within a controlled project environment, minimizing risk to the live system.
+- **Fault-Tolerant Orchestration**: The ResilientOrchestrator ensures that even self-improvement tasks are managed robustly, with error handling and checkpointing.
 
 ### Example
 ```bash
@@ -314,6 +315,8 @@ The application stores configuration in `~/.AIMA_CodeGen/config.ini`. Key settin
 
 ## Multi-Agent Architecture
 
+A central orchestrator coordinates all agents, ensuring fault tolerance and telemetry-driven oversight of the development process.
+
 ### Planner Agent
 - Analyzes requirements and creates development waypoints
 - Breaks down complex tasks into manageable steps
@@ -359,6 +362,7 @@ Robust error handling includes:
 - **Invalid Responses**: JSON parsing error recovery
 - **Budget Enforcement**: Hard stops when budget is exceeded
 - **Validation Errors**: Clear error messages for invalid inputs
+- **Partial Failures**: Isolate and handle failing waypoints without stopping the whole process, using retries and safe defaults to prevent cascade failures
 
 ## Development Workflow
 
@@ -416,7 +420,7 @@ Check logs for detailed error information:
 
 ## Contributing
 
-This project follows the AIMA (Artificial Intelligence: A Modern Approach) principles for multi-agent systems. Contributions should maintain the modular architecture and comprehensive error handling.
+Contributions should maintain backwards compatibility, pass all tests and style checks (per `.flake8-ai` configuration), and adhere to the guiding principles in **GOLDEN_RULES.md**.
 
 ## License
 

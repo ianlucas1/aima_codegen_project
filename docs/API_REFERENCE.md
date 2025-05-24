@@ -455,3 +455,102 @@ except ToolingError as e:
     # Handle tooling error
     logger.error(f"Git operation failed: {e}")
 ```
+
+## Core Orchestration & Resilience API
+
+### ResilientOrchestrator
+
+**Location**: `aima_codegen/orchestrator.py`
+
+Fault-tolerant orchestrator that extends the base Orchestrator with error isolation and recovery features.
+
+```python
+class ResilientOrchestrator(Orchestrator):
+    def execute_waypoint(self, waypoint_id: str, agent_func, critical: bool = False) -> Any
+```
+
+#### Methods
+
+##### execute_waypoint(waypoint_id: str, agent_func: Callable, critical: bool = False) -> Any
+Executes a given agent function as a waypoint with fault isolation.
+
+**Parameters:**
+- `waypoint_id`: Identifier for the waypoint (for tracking and logging)
+- `agent_func`: Function or lambda that executes the agent's task (e.g., `planner.plan_next`)
+- `critical`: If True, a failure triggers special recovery or abort logic
+
+**Returns:** Result of the agent function, or a recovery result on failure.
+
+This method handles:
+- Timeout and retries (circuit breaker with exponential backoff)
+- Graceful shutdown checks (stopping if a shutdown event is set)
+- Error catching: marking waypoint as failed and attempting recovery if `critical`
+
+##### _execute_with_circuit_breaker(func: Callable, checkpoint: Any, timeout: int) -> Any
+*(internal)* Executes a function in an isolated subprocess with a timeout and multiple retries.
+
+##### _shutdown_handler(signum, frame) -> None
+*(internal)* Handles SIGINT/SIGTERM by setting a stop event and saving progress (checkpoint).
+
+##### _handle_critical_failure(waypoint_id, error: Exception) -> Any
+*(internal)* Attempts to recover from a critical waypoint failure (e.g., roll back or skip future waypoints).
+
+### TelemetryAwareErrorHandler
+
+**Location**: `aima_codegen/error_handler.py`
+
+Centralized error logging and telemetry integration.
+
+```python
+class TelemetryAwareErrorHandler:
+    def __init__(self, state: Optional[ProjectState] = None)
+```
+
+#### Methods
+
+##### handle_error(error: Exception, context: Dict[str, Any], agent: str) -> None
+Logs the error with context and updates internal telemetry (error history, patterns). May modify `context` to inject safe defaults (e.g., for missing keys).
+
+##### get_recovery_strategy(error: Exception) -> Dict[str, str]
+Returns a suggested recovery action (e.g., retry with extended timeout, inject default values) based on error type.
+
+##### get_telemetry_summary() -> Dict[str, Any]
+Provides a summary of collected error telemetry (counts by agent and error type).
+
+##### should_circuit_break(agent: str) -> bool
+Indicates if the error frequency for a given agent exceeds a threshold, suggesting the orchestrator should halt or change strategy for that agent.
+
+This error handler works in conjunction with the orchestrator to prevent repeated failures from propagating and to assist in automated recovery.
+
+### SymlinkAwarePathResolver
+
+**Location**: `aima_codegen/path_resolver.py`
+
+Utility to correctly handle file paths in a symlinked environment (used during self-improvement where `aima_codegen` is linked into a project).
+
+```python
+class SymlinkAwarePathResolver:
+    def __init__(self, base_path: str)
+```
+
+#### Methods
+
+##### resolve_path(path: str) -> Path
+Resolves a given path string to an absolute Path, following symlinks if present.
+
+##### get_canonical_path(path: str) -> Path
+Returns the fully resolved canonical Path for a given path (resolving any symlinks).
+
+##### resolve_module_path(module: str) -> Optional[Path]
+Converts a module import string to a file system path, if that module exists in the base path or its subpackages.
+
+##### resolve_relative(path: str, from_path: str) -> Path
+Resolves a relative path against a reference path within the base project.
+
+##### validate_safe_path(path: str) -> None
+Raises ValueError if the given path would escape the base project directory (preventing directory traversal attacks).
+
+##### setup_python_path() -> None
+Adds both the logical project path and the physical path (if different due to symlinks) to `sys.path` to ensure imports work correctly in a self-improvement setup.
+
+In normal operation, these classes work behind the scenes, but understanding their interface can help in extending or debugging the system's core behavior.

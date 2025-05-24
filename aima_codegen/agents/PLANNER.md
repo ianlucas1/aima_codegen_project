@@ -1,21 +1,67 @@
 # Planner Agent Guide
 
 ## Purpose
-The Planner agent decomposes user requirements into small, logical, testable waypoints that can be executed sequentially to build a complete Python project.
+The Planner agent decomposes user requirements into small, logical, testable waypoints that can be executed independently by other agents (CodeGen and TestWriter).
 
 ## Input/Output Specifications
 
 ### Input Context
-- `user_prompt`: The initial project requirements from the user
-- `model`: LLM model name to use for planning
+- `user_prompt`: String containing the project requirements
+- `model`: Optional LLM model name to use
 
 ### Output Format
 Returns a dictionary with:
-- `success`: Boolean indicating if planning succeeded
-- `waypoints`: List of Waypoint objects if successful
+- `success`: Boolean indicating planning success
+- `waypoints`: List of Waypoint objects
 - `tokens_used`: Number of tokens consumed
 - `cost`: API call cost
-- `error`: Error message if failed
+
+### Waypoint Structure
+Each waypoint contains:
+- `id`: Unique identifier (e.g., "wp_001", "wp_002")
+- `description`: Clear description of what needs to be done
+- `agent_type`: Either "CodeGen" or "TestWriter" (validated)
+- `dependencies`: Array of waypoint IDs this depends on
+- `status`: Current status (initially "PENDING")
+
+## Response Parsing
+
+### JSON Extraction
+The agent can handle LLM responses in multiple formats:
+
+1. **Raw JSON**: Direct JSON array
+2. **Markdown Code Blocks**: JSON wrapped in ```json ... ``` blocks
+3. **Mixed Content**: JSON embedded within explanatory text
+
+The parser automatically:
+- Detects and extracts JSON from markdown code blocks
+- Strips markdown formatting (```json and ```)
+- Handles multi-line JSON content
+- Falls back to raw content if no code blocks found
+
+Example of handled response:
+```
+Here's the waypoint plan:
+
+```json
+[
+  {
+    "id": "wp_001",
+    "description": "Create main application",
+    "agent_type": "CodeGen",
+    "dependencies": []
+  }
+]
+```
+
+This creates a foundational structure...
+
+### Agent Type Validation
+The agent validates that `agent_type` is one of:
+- `"CodeGen"`: For code generation tasks
+- `"TestWriter"`: For test writing tasks
+
+Invalid agent types are logged as warnings and default to `"CodeGen"` to ensure waypoint execution continues.
 
 ## Best Practices
 

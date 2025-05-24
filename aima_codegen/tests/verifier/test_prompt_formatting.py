@@ -23,7 +23,7 @@ class TestPromptFormatting:
         
         # Should not raise KeyError when feedback_json is missing
         with patch.object(agent, 'call_llm') as mock_call:
-            mock_call.return_value = MagicMock(content='{"code": "def test(): pass"}')
+            mock_call.return_value = MagicMock(content='{"code": {"test.py": "def test(): pass"}, "dependencies": []}')
             result = agent.execute(context)
             assert 'error' not in result or 'KeyError' not in str(result.get('error', ''))
 
@@ -40,7 +40,7 @@ class TestPromptFormatting:
         }
         
         with patch.object(agent, 'call_llm') as mock_call:
-            mock_call.return_value = MagicMock(content='{"code": "def test(): pass"}')
+            mock_call.return_value = MagicMock(content='{"code": {"test.py": "def test(): pass"}, "dependencies": []}')
             result = agent.execute(context)
             # Should execute without errors
             assert 'error' not in result or 'KeyError' not in str(result.get('error', ''))
@@ -58,7 +58,7 @@ class TestPromptFormatting:
         
         # Should not raise KeyError
         with patch.object(agent, 'call_llm') as mock_call:
-            mock_call.return_value = MagicMock(content='{"test_code": "def test_func(): assert True"}')
+            mock_call.return_value = MagicMock(content='{"test_code": {"test_module.py": "def test_func(): assert True"}, "dependencies": ["pytest"]}')
             result = agent.execute(context)
             assert 'error' not in result or 'KeyError' not in str(result.get('error', ''))
 
@@ -75,7 +75,7 @@ class TestPromptFormatting:
         }
         
         with patch.object(agent, 'call_llm') as mock_call:
-            mock_call.return_value = MagicMock(content='{"test_code": "def test_func(): assert True"}')
+            mock_call.return_value = MagicMock(content='{"test_code": {"test_module.py": "def test_func(): assert True"}, "dependencies": ["pytest"]}')
             result = agent.execute(context)
             assert 'error' not in result or 'KeyError' not in str(result.get('error', ''))
 

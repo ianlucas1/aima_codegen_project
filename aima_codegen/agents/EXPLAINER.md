@@ -1,22 +1,79 @@
 # Explainer Agent Guide
 
 ## Purpose
-The Explainer agent generates clear, comprehensive plain English explanations of Python code, making complex programming concepts accessible to learners and stakeholders.
+The Explainer agent generates clear, educational explanations of Python code for developers and learners. It can provide both natural language explanations and structured documentation formats, while ensuring sensitive information is redacted.
 
 ## Input/Output Specifications
 
 ### Input Context
-- `file_path`: Path to the Python file being explained
-- `code_content`: The actual code content to explain
-- `target`: Optional specific function or class to focus on
-- `model`: LLM model name to use for explanation
+- `file_path`: Path to the file being explained
+- `code_content`: The actual code to explain
+- `target`: Optional specific function/class name to focus on
+- `structured_format`: Boolean flag for structured output format
+- `model`: LLM model name to use
 
 ### Output Format
 Returns a dictionary with:
-- `success`: Boolean indicating if explanation succeeded
-- `explanation`: Plain English explanation text
+- `success`: Boolean indicating explanation success
+- `explanation`: The generated explanation text
+- `redacted_secrets`: Boolean indicating if secrets were redacted
 - `tokens_used`: Number of tokens consumed
 - `cost`: API call cost
+
+## Security Features
+
+### Secret Redaction
+The agent automatically detects and redacts potential secrets before processing:
+
+**Detected Patterns:**
+- API keys: `api_key="REDACTED"`
+- Passwords: `password="REDACTED"`
+- Secrets: `secret="REDACTED"`
+- Tokens: `token="REDACTED"`
+- Base64 strings (40+ chars): `REDACTED_BASE64`
+- Hex strings (32+ chars): `REDACTED_HEX`
+
+**Example:**
+```python
+# Original code
+api_key = "sk-1234567890abcdef"
+password = "super_secret_123"
+
+# Processed code
+api_key = "REDACTED"
+password = "REDACTED"
+```
+
+This ensures explanations never expose sensitive information.
+
+## Output Formats
+
+### Natural Language Format (Default)
+Provides conversational explanations suitable for learning:
+- Clear, accessible language
+- Step-by-step breakdowns
+- Beginner-friendly terminology
+- Context-aware focus
+
+### Structured Format
+When `structured_format=True`, provides organized documentation:
+
+```markdown
+## Overview
+[Brief summary of what the code does]
+
+## Key Components
+[List and explain main functions/classes]
+
+## How It Works
+[Step-by-step explanation of the logic]
+
+## Important Details
+[Any special considerations, edge cases, or notable patterns]
+
+## Usage Example
+[How to use this code]
+```
 
 ## Best Practices
 
@@ -240,6 +297,7 @@ Error handling covers [scenarios] to ensure [reliability aspects].
 - **Incorrect terminology**: Using wrong technical terms
 - **Missing edge cases**: Not explaining error conditions
 - **Oversimplification**: Losing important technical details
+- **Exposing secrets**: Avoid revealing any sensitive credentials or keys present in the code beyond what is necessary for understanding
 
 ### Communication Pitfalls
 - **Too technical**: Using jargon without explanation
