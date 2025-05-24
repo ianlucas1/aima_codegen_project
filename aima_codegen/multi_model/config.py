@@ -317,27 +317,27 @@ class ModelPresets:
     """Predefined model configurations for different scenarios."""
     
     FAST_DEVELOPMENT = {
-        "Planner": AgentModelConfig("OpenAI", "o4-mini-2025-04-16", 0.7, 2000),
-        "CodeGen": AgentModelConfig("OpenAI", "o4-mini-2025-04-16", 0.2, 4000),
-        "TestWriter": AgentModelConfig("OpenAI", "o4-mini-2025-04-16", 0.2, 3000),
+        "Planner": AgentModelConfig("Google", "gemini-2.5-flash-preview-05-20", 0.7, 2000),
+        "CodeGen": AgentModelConfig("Google", "gemini-2.5-flash-preview-05-20", 0.2, 8000),
+        "TestWriter": AgentModelConfig("Google", "gemini-2.5-flash-preview-05-20", 0.2, 4000),
         "Reviewer": AgentModelConfig("Google", "gemini-2.5-flash-preview-05-20", 0.3, 2000),
         "Explainer": AgentModelConfig("Google", "gemini-2.5-flash-preview-05-20", 0.7, 1000)
     }
     
     HIGH_QUALITY = {
-        "Planner": AgentModelConfig("OpenAI", "o3-2025-04-16", 0.5, 3000),
-        "CodeGen": AgentModelConfig("OpenAI", "gpt-4.1-2025-04-14", 0.1, 6000),
-        "TestWriter": AgentModelConfig("OpenAI", "gpt-4.1-2025-04-14", 0.1, 5000),
-        "Reviewer": AgentModelConfig("Anthropic", "claude-opus-4-20250514", 0.2, 3000),
-        "Explainer": AgentModelConfig("Anthropic", "claude-opus-4-20250514", 0.6, 2000)
+        "Planner": AgentModelConfig("Anthropic", "claude-opus-4-20250514", 0.5, 3000),
+        "CodeGen": AgentModelConfig("Anthropic", "claude-sonnet-4-20250514", 0.2, 6000),
+        "TestWriter": AgentModelConfig("Anthropic", "claude-sonnet-4-20250514", 0.2, 5000),
+        "Reviewer": AgentModelConfig("Anthropic", "claude-opus-4-20250514", 0.3, 3000),
+        "Explainer": AgentModelConfig("Anthropic", "claude-sonnet-4-20250514", 0.6, 2000)
     }
     
     BALANCED = {
-        "Planner": AgentModelConfig("OpenAI", "gpt-4.1-2025-04-14", 0.7, 2000),
-        "CodeGen": AgentModelConfig("OpenAI", "gpt-4.1-2025-04-14", 0.2, 4000),
-        "TestWriter": AgentModelConfig("OpenAI", "gpt-4.1-2025-04-14", 0.2, 4000),
+        "Planner": AgentModelConfig("Anthropic", "claude-opus-4-20250514", 0.5, 3000),
+        "CodeGen": AgentModelConfig("Google", "gemini-2.5-flash-preview-05-20", 0.2, 8000),
+        "TestWriter": AgentModelConfig("Anthropic", "claude-sonnet-4-20250514", 0.2, 4000),
         "Reviewer": AgentModelConfig("Anthropic", "claude-sonnet-4-20250514", 0.3, 2000),
-        "Explainer": AgentModelConfig("Google", "gemini-2.5-pro-preview-05-06", 0.7, 1500)
+        "Explainer": AgentModelConfig("Anthropic", "claude-sonnet-4-20250514", 0.7, 1500)
     }
     
     @classmethod
