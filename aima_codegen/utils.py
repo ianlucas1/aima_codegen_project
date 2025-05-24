@@ -21,7 +21,7 @@ def slugify(text: str) -> str:
     return slug.strip('-')
 
 def setup_signal_handler(cleanup_func):
-    """Setup SIGINT handler for graceful shutdown.
+    """Setup SIGINT and SIGTERM handlers for graceful shutdown.
     Implements spec_v5.1.md Section 3.8 - Graceful Shutdown
     """
     def signal_handler(signum, frame):
@@ -34,6 +34,7 @@ def setup_signal_handler(cleanup_func):
         sys.exit(0)
     
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
 def check_lock_file(lock_path: Path, project_name: str) -> bool:
     """Check if project is locked by another process.
@@ -134,7 +135,6 @@ def validate_self_improvement(project_path: Path) -> bool:
     # Check for obvious breaks
     try:
         # Try importing the package
-        import importlib
         import aima_codegen
         importlib.reload(aima_codegen)
         return True

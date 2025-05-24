@@ -14,7 +14,7 @@ class TestOpenAIAdapter:
     
     def test_call_llm_success(self):
         """Test successful LLM call."""
-        with patch('openai.OpenAI') as mock_openai_class:
+        with patch('aima_codegen.llm.openai_adapter.OpenAI') as mock_openai_class:
             mock_client = Mock()
             mock_openai_class.return_value = mock_client
             
@@ -40,7 +40,7 @@ class TestOpenAIAdapter:
     
     def test_call_llm_auth_error(self):
         """Test authentication error handling."""
-        with patch('openai.OpenAI') as mock_openai_class:
+        with patch('aima_codegen.llm.openai_adapter.OpenAI') as mock_openai_class:
             mock_client = Mock()
             mock_openai_class.return_value = mock_client
             
@@ -63,7 +63,7 @@ class TestOpenAIAdapter:
     
     def test_call_llm_rate_limit_with_retry(self):
         """Test rate limit error with retry."""
-        with patch('openai.OpenAI') as mock_openai_class:
+        with patch('aima_codegen.llm.openai_adapter.OpenAI') as mock_openai_class:
             mock_client = Mock()
             mock_openai_class.return_value = mock_client
             
@@ -92,7 +92,7 @@ class TestOpenAIAdapter:
     
     def test_validate_api_key_success(self):
         """Test successful API key validation."""
-        with patch('openai.OpenAI') as mock_openai_class:
+        with patch('aima_codegen.llm.openai_adapter.OpenAI') as mock_openai_class:
             mock_client = Mock()
             mock_openai_class.return_value = mock_client
             mock_client.models.list.return_value = ["gpt-4", "gpt-3.5"]
@@ -102,7 +102,7 @@ class TestOpenAIAdapter:
     
     def test_validate_api_key_failure(self):
         """Test failed API key validation."""
-        with patch('openai.OpenAI') as mock_openai_class:
+        with patch('aima_codegen.llm.openai_adapter.OpenAI') as mock_openai_class:
             mock_client = Mock()
             mock_openai_class.return_value = mock_client
             mock_client.models.list.side_effect = Exception("Invalid key")
@@ -116,7 +116,7 @@ class TestAnthropicAdapter:
     
     def test_call_llm_success(self):
         """Test successful Anthropic API call."""
-        with patch('anthropic.Anthropic') as mock_anthropic_class:
+        with patch('aima_codegen.llm.anthropic_adapter.Anthropic') as mock_anthropic_class:
             mock_client = Mock()
             mock_anthropic_class.return_value = mock_client
             

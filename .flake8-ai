@@ -1,0 +1,25 @@
+[flake8]
+max-line-length = 120
+# Ignore common AI-generated code issues
+ignore =
+    E501,
+    F401,
+    E303,
+    W292,
+    W291,
+    W293,
+    F841,
+    E302,
+    E301,
+    W503,
+    W504,
+    E128
+
+# Per-file ignores for specific patterns
+per-file-ignores =
+    */generated_*.py: F401,E501,F841
+    tests/test_generated_*.py: E501,E303,W292
+    src/aima_codegen/agents/*.py: E501,W503
+
+# Allow higher complexity for generated algorithms
+max-complexity = 20 
