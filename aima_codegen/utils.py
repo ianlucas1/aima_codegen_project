@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Optional
 from datetime import datetime, timezone
+import subprocess
+import importlib
 
 logger = logging.getLogger(__name__)
 
@@ -112,3 +114,30 @@ def remove_lock_file(lock_path: Path):
     """Remove lock file if it exists."""
     if lock_path.exists():
         lock_path.unlink()
+
+def validate_self_improvement(project_path: Path) -> bool:
+    """Validate self-improvement changes before applying."""
+    if not (project_path / "SELF_IMPROVEMENT_MODE").exists():
+        return True  # Normal project
+
+    # Run existing tests
+    result = subprocess.run(
+        ["python", "-m", "pytest", "aima_codegen/tests/", "-v"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        logger.error("Self-improvement broke existing tests!")
+        return False
+
+    # Check for obvious breaks
+    try:
+        # Try importing the package
+        import importlib
+        import aima_codegen
+        importlib.reload(aima_codegen)
+        return True
+    except Exception as e:
+        logger.error(f"Self-improvement broke imports: {e}")
+        return False
