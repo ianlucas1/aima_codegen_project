@@ -2,7 +2,6 @@
 Implements spec_v5.1.md Section 2.2 - TestWriter Agent
 """
 import json
-import re
 import logging
 from typing import Dict, Optional
 
@@ -72,13 +71,7 @@ class TestWriterAgent(BaseAgent):
         result = None
         
         try:
-            # Strip markdown if present
-            raw_content = response.content
-            if raw_content.strip().startswith('```'):
-                import re
-                raw_content = re.sub(r'^```json\s*\n', '', raw_content.strip())
-                raw_content = re.sub(r'\n```\s*$', '', raw_content)
-            parsed_result = json.loads(raw_content)
+            parsed_result = json.loads(response.content)
             
             # Track decision point: Test validation
             num_test_files = len(parsed_result.get("code", {}))
@@ -139,8 +132,6 @@ class TestWriterAgent(BaseAgent):
     def _build_prompt(self, waypoint, source_code: str, project_context: str,
                      revision_feedback: Optional[RevisionFeedback]) -> str:
         """Build the structured prompt for test generation."""
-        # Note: We need to escape the curly braces in the JSON example
-        # by doubling them: {{ and }} become literal { and }
         prompt = """### ROLE ###
 You are an expert Python test engineer. Your task is to write comprehensive pytest unit tests for the provided code.
 
@@ -166,11 +157,10 @@ You are an expert Python test engineer. Your task is to write comprehensive pyte
             feedback_json = revision_feedback.model_dump_json(exclude_none=True)
             prompt += f"""
 ### REVISION FEEDBACK ###
-{{{{feedback_json}}}}
+{feedback_json}
 "The previous tests failed. Fix all identified issues and ensure tests pass."
 """
         
-        # The JSON example with escaped braces
         prompt += """
 ### OUTPUT FORMAT ###
 Provide *only* a JSON object with two keys: `code` and `dependencies`.
@@ -179,12 +169,12 @@ Provide *only* a JSON object with two keys: `code` and `dependencies`.
 
 Example:
 ```json
-{{
-  "code": {{
-    "src/tests/test_app.py": "import pytest\nfrom src.app import add\n\ndef test_add():\n    assert add(2, 3) == 5\n"
-  }},
+{
+  "code": {
+    "src/tests/test_app.py": "import pytest\\nfrom src.app import add\\n\\ndef test_add():\\n    assert add(2, 3) == 5\\n"
+  },
   "dependencies": ["pytest"]
-}}
+}
 ```"""
         
         return prompt.format(

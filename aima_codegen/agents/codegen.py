@@ -3,6 +3,7 @@ Implements spec_v5.1.md Section 2.2 - CodeGen Agent
 """
 import json
 import logging
+import re
 from typing import Dict, List, Optional
 
 from .base import BaseAgent
@@ -146,7 +147,7 @@ You are an expert Python developer. Your task is to write clean, efficient, PEP 
             feedback_json = revision_feedback.model_dump_json(exclude_none=True)
             prompt += f"""
 ### REVISION FEEDBACK (Optional) ###
-{feedback_json}
+{{{{feedback_json}}}}
 "The previous attempt failed. Analyze the feedback above and regenerate the code for the affected files, fixing *all* identified issues. Ensure your output is valid JSON."
 """
         
@@ -158,12 +159,12 @@ Provide *only* a JSON object with two keys: `code` and `dependencies`.
 
 Example:
 ```json
-{
-  "code": {
+{{
+  "code": {{
     "src/app.py": "def add(a, b):\\n    return a + b\\n"
-  },
+  }},
   "dependencies": []
-}
+}}
 ```"""
         
         return prompt.format(

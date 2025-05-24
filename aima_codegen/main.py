@@ -175,7 +175,9 @@ def improve(
 
         "basic-telemetry": "Add comprehensive logging to all agent execute() methods that captures: input context, raw LLM responses, token usage, decision points, and outcome. Store in project_path/logs/agent_telemetry.jsonl",
 
-        "debrief-system": "Add post-task debrief generation to each agent. After execute(), generate structured self-assessment including: confidence levels, ambiguity points, decisions made, alternatives considered. Store in standardized JSON format."
+        "debrief-system": "Add post-task debrief generation to each agent. After execute(), generate structured self-assessment including: confidence levels, ambiguity points, decisions made, alternatives considered. Store in standardized JSON format.",
+
+        "test-fixes": "Fix all failing unit tests in aima_codegen/tests/. The main issues are: 1) LLM adapter tests need proper mocking to prevent real API calls, 2) Agent tests have KeyError issues with call_llm response format, 3) Orchestrator tests have Mock arithmetic errors in budget tracking, 4) State manager test has permission issues. Update tests to work with current codebase including telemetry systems."
     }
 
     if feature not in improvements:
