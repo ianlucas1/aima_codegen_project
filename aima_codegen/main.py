@@ -158,6 +158,42 @@ def gui():
     from aima_codegen.gui import launch_gui
     launch_gui()
 
+@app.command()
+def improve(
+    feature: str = typer.Argument(..., help="Improvement to implement from roadmap"),
+    budget: float = typer.Option(5.0, "--budget", "-b", help="Budget for improvement")
+):
+    """Self-improvement mode: Implement features from the strategic roadmap."""
+    # Initialize self-improvement project
+    success = orchestrator.init_self_improvement(feature, budget)
+    if not success:
+        raise typer.Exit(1)
+
+    # Map feature names to requirements
+    improvements = {
+        "agent-guides": "Create markdown guidance documents for each agent: PLANNER.md, CODEGEN.md, TESTWRITER.md, REVIEWER.md, EXPLAINER.md in aima_codegen/agents/ directory. Each should contain: purpose, input/output specs, best practices, common patterns, and inter-agent communication protocols.",
+
+        "basic-telemetry": "Add comprehensive logging to all agent execute() methods that captures: input context, raw LLM responses, token usage, decision points, and outcome. Store in project_path/logs/agent_telemetry.jsonl",
+
+        "debrief-system": "Add post-task debrief generation to each agent. After execute(), generate structured self-assessment including: confidence levels, ambiguity points, decisions made, alternatives considered. Store in standardized JSON format."
+    }
+
+    if feature not in improvements:
+        typer.echo(f"Unknown improvement: {feature}")
+        typer.echo(f"Available: {', '.join(improvements.keys())}")
+        raise typer.Exit(1)
+
+    # Run normal development with special requirements
+    success = orchestrator.develop(
+        prompt=improvements[feature],
+        budget=0.0,  # Already set
+        provider=None,
+        model=None
+    )
+
+    if not success:
+        raise typer.Exit(1)
+
 @app.callback()
 def main():
     """AI Multi-Agent Coding Assistant - Generate Python projects with AI agents."""

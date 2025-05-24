@@ -21,6 +21,15 @@ class PlannerAgent(BaseAgent):
         Implements spec_v5.1.md Appendix C - Structured Prompts
         """
         user_prompt = context.get("user_prompt", "")
+        decision_points = []
+        
+        # Track decision point: Planning approach
+        decision_points.append(self.track_decision_point(
+            description="Planning decomposition strategy",
+            options=["Sequential build", "Feature-first", "Test-driven"],
+            chosen="Sequential build",
+            reasoning="Ensures logical dependency order and stable foundation"
+        ))
         
         # Build structured prompt
         prompt = """### ROLE ###
@@ -76,9 +85,20 @@ Example:
         )
         
         # Parse waypoints from response
+        confidence_level = 0.8  # High confidence for structured planning
+        result = None
+        
         try:
             waypoints_data = json.loads(response.content)
             waypoints = []
+            
+            # Track decision point: Waypoint validation
+            decision_points.append(self.track_decision_point(
+                description="Waypoint structure validation",
+                options=["Accept all waypoints", "Filter invalid", "Request regeneration"],
+                chosen="Accept all waypoints" if len(waypoints_data) > 0 else "Request regeneration",
+                reasoning=f"Found {len(waypoints_data)} waypoints with valid structure"
+            ))
             
             for wp_data in waypoints_data:
                 waypoint = Waypoint(
@@ -89,7 +109,7 @@ Example:
                 )
                 waypoints.append(waypoint)
             
-            return {
+            result = {
                 "success": True,
                 "waypoints": waypoints,
                 "tokens_used": response.prompt_tokens + response.completion_tokens,
@@ -98,9 +118,29 @@ Example:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse planner response: {e}")
-            return {
+            confidence_level = 0.0  # No confidence due to parsing failure
+            result = {
                 "success": False,
                 "error": "Failed to parse waypoints",
                 "tokens_used": response.prompt_tokens + response.completion_tokens,
                 "cost": response.cost
             }
+        
+        # Log comprehensive telemetry
+        self.log_agent_telemetry(
+            context=context,
+            llm_response=response,
+            result=result,
+            decision_points=decision_points,
+            confidence_level=confidence_level
+        )
+        
+        # Generate post-task debrief
+        debrief = self.generate_debrief(
+            context=context,
+            result=result,
+            decision_points=decision_points,
+            confidence_level=confidence_level
+        )
+        
+        return result

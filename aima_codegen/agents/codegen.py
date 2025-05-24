@@ -23,6 +23,25 @@ class CodeGenAgent(BaseAgent):
         waypoint = context.get("waypoint")
         project_context = context.get("project_context", "")
         revision_feedback = context.get("revision_feedback", None)
+        decision_points = []
+        
+        # Track decision point: Code generation approach
+        approach = "Revision" if revision_feedback else "Initial generation"
+        decision_points.append(self.track_decision_point(
+            description="Code generation mode",
+            options=["Initial generation", "Revision", "Enhancement"],
+            chosen=approach,
+            reasoning=f"{'Addressing feedback' if revision_feedback else 'Fresh implementation'}"
+        ))
+        
+        # Track decision point: Template selection
+        has_context = len(project_context) > 100
+        decision_points.append(self.track_decision_point(
+            description="Context utilization strategy",
+            options=["Full context", "Minimal context", "No context"],
+            chosen="Full context" if has_context else "Minimal context",
+            reasoning=f"Context size: {len(project_context)} chars"
+        ))
         
         # Build structured prompt
         prompt = self._build_prompt(waypoint, project_context, revision_feedback)
@@ -41,26 +60,67 @@ class CodeGenAgent(BaseAgent):
         )
         
         # Parse code and dependencies from response
+        confidence_level = 0.7  # Moderate confidence for code generation
+        result = None
+        
         try:
-            result = json.loads(response.content)
+            parsed_result = json.loads(response.content)
             
-            return {
+            # Track decision point: Output validation
+            num_files = len(parsed_result.get("code", {}))
+            num_deps = len(parsed_result.get("dependencies", []))
+            decision_points.append(self.track_decision_point(
+                description="Output structure validation",
+                options=["Accept output", "Request corrections", "Manual intervention"],
+                chosen="Accept output",
+                reasoning=f"Generated {num_files} files and {num_deps} dependencies"
+            ))
+            
+            confidence_level = 0.9  # High confidence for successful parsing
+            result = {
                 "success": True,
-                "code": result.get("code", {}),
-                "dependencies": result.get("dependencies", []),
+                "code": parsed_result.get("code", {}),
+                "dependencies": parsed_result.get("dependencies", []),
                 "tokens_used": response.prompt_tokens + response.completion_tokens,
                 "cost": response.cost
             }
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse CodeGen response: {e}")
-            return {
+            confidence_level = 0.1  # Very low confidence due to parsing failure
+            decision_points.append(self.track_decision_point(
+                description="JSON parsing failure",
+                options=["Retry with clarification", "Manual parsing", "Request regeneration"],
+                chosen="Request regeneration",
+                reasoning=f"JSON parsing failed: {str(e)}"
+            ))
+            
+            result = {
                 "success": False,
                 "error": "Failed to parse generated code",
                 "raw_content": response.content,
                 "tokens_used": response.prompt_tokens + response.completion_tokens,
                 "cost": response.cost
             }
+        
+        # Log comprehensive telemetry
+        self.log_agent_telemetry(
+            context=context,
+            llm_response=response,
+            result=result,
+            decision_points=decision_points,
+            confidence_level=confidence_level
+        )
+        
+        # Generate post-task debrief
+        debrief = self.generate_debrief(
+            context=context,
+            result=result,
+            decision_points=decision_points,
+            confidence_level=confidence_level
+        )
+        
+        return result
     
     def _build_prompt(self, waypoint, project_context: str, 
                      revision_feedback: Optional[RevisionFeedback]) -> str:

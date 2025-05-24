@@ -64,6 +64,17 @@ class Orchestrator:
             from .agents import ReviewerAgent
             github_token = config.get("GitHub", "token")
             self.reviewer = ReviewerAgent(self.llm_service, github_token)
+    
+    def _setup_agent_telemetry(self):
+        """Set up telemetry logging for all agents."""
+        agents = [self.planner, self.codegen, self.testwriter, self.explainer]
+        if self.reviewer:
+            agents.append(self.reviewer)
+        
+        for agent in agents:
+            if agent and hasattr(agent, 'set_project_path'):
+                agent.set_project_path(self.project_path)
+                agent.enable_telemetry(True)
 
     def enable_multi_model(self):
         """Enable multi-model configuration."""
@@ -163,6 +174,10 @@ class Orchestrator:
         self.venv_manager = VEnvManager(self.project_path)
         self.budget_tracker = BudgetTracker(self.project_state.total_budget_usd)
         self.budget_tracker.current_spent = self.project_state.current_spent_usd
+        
+        # Set up telemetry for any existing agents
+        if self.planner:  # Agents might be initialized already
+            self._setup_agent_telemetry()
         
         self.console.print(f"[green]✓ Project '{project_name}' loaded successfully![/green]")
         return True
@@ -391,6 +406,10 @@ class Orchestrator:
             self.testwriter = TestWriterAgent(self.llm_service)
             self.explainer = ExplainerAgent(self.llm_service)
             self._initialize_reviewer()
+            
+            # Set up telemetry logging for agents
+            if self.project_path:
+                self._setup_agent_telemetry()
             
             # Update project state
             if self.project_state:
@@ -946,3 +965,26 @@ Regenerate the *entire* response in the correct JSON format, ensuring all struct
                 target_path = src_dir / relative_path
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(item, target_path)
+
+    def init_self_improvement(self, improvement_name: str, budget: float) -> bool:
+        """Initialize a self-improvement project targeting aima_codegen itself."""
+        # Use special prefix for self-improvement projects
+        project_name = f"SELF_IMPROVE_{improvement_name}"
+
+        # Initialize like normal project
+        if not self.init_project(project_name, budget):
+            return False
+
+        # Override src path to point to aima_codegen
+        import aima_codegen
+        package_path = Path(aima_codegen.__file__).parent
+
+        # Create symlink from project src to aima_codegen
+        src_path = self.project_path / "src"
+        src_path.rmdir()  # Remove empty dir
+        src_path.symlink_to(package_path)
+
+        # Add safety file
+        (self.project_path / "SELF_IMPROVEMENT_MODE").touch()
+
+        return True
