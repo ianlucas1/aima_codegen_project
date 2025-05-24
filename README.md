@@ -8,6 +8,7 @@ A sophisticated AI-powered coding assistant that uses multiple specialized agent
 - **🤖 Multi-Model Support**: Configure different LLM models for each agent - optimize for cost and quality
 - **🔗 GitHub Integration**: Automated code review, pull request creation, and branch management
 - **👁️ AI Code Review**: Intelligent code analysis with the Reviewer agent before merging
+- **🧠 Self-Improvement System**: The system can now enhance its own capabilities autonomously using the `improve` command
 
 ## Features
 
@@ -236,6 +237,37 @@ aima-codegen config --get Section.key
 # Set a configuration value
 aima-codegen config --set Section.key --value "new_value"
 ```
+
+## Self-Improvement System
+
+AIMA CodeGen can now improve its own capabilities autonomously:
+
+### `improve`
+Enable the system to implement enhancements to itself.
+
+```bash
+aima-codegen improve FEATURE --budget AMOUNT
+```
+
+Available improvements:
+- `agent-guides`: Create comprehensive documentation for each agent
+- `basic-telemetry`: Add execution logging and decision tracking
+- `debrief-system`: Implement post-task self-assessment
+
+### Features
+- **Autonomous Enhancement**: System modifies its own code safely
+- **Agent Guidelines**: Self-generated best practices documentation
+- **Telemetry Logging**: Complete execution tracking with decision reasoning
+- **Self-Assessment**: Post-task debriefs with confidence metrics
+- **Safe Modification**: Symlink-based approach prevents breaking changes
+
+### Example
+```bash
+# Have the system improve its own documentation
+aima-codegen improve agent-guides --budget 5.0
+```
+
+The system will analyze its own architecture and implement the requested improvements autonomously.
 
 ## Configuration
 
