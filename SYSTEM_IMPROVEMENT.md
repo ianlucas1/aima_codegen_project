@@ -8,33 +8,43 @@ You are improving the AIMA CodeGen system itself. Remember:
 4. Start with simple additions (markdown files) before code changes
 5. Document every change clearly
 
-## Implementation Status:
+## Core Self-Improvement Infrastructure (Implemented):
+The following foundational components have been successfully implemented and are active in the system. Self-improvement tasks will build upon this existing infrastructure.
 
-### ✅ Phase 1: Agent Guides (COMPLETED)
-Created comprehensive documentation in `aima_codegen/agents/`:
-- ✅ PLANNER.md - Planning best practices and waypoint decomposition
-- ✅ CODEGEN.md - Code generation patterns and quality standards  
-- ✅ TESTWRITER.md - Test writing standards and pytest best practices
-- ✅ REVIEWER.md - Code review criteria and GitHub integration
-- ✅ EXPLAINER.md - Explanation guidelines and communication strategies
+### ✅ Phase 1: Agent Guidance System
+Documentation in `aima_codegen/agents/` providing operational blueprints:
+- **PLANNER.md**: Details waypoint decomposition and planning best practices.
+- **CODEGEN.md**: Outlines code generation patterns, quality standards, and dependency management.
+- **TESTWRITER.md**: Specifies test writing standards and pytest best practices.
+- **REVIEWER.md**: Defines code review criteria and GitHub integration protocols.
+- **EXPLAINER.md**: Sets guidelines for clear code explanations and communication strategies.
 
-### ✅ Phase 2: Logging Infrastructure (COMPLETED)
-Enhanced all agent execute() methods with comprehensive telemetry:
-- ✅ Added base logging infrastructure to BaseAgent class
-- ✅ Captures input context, raw LLM responses, token usage
-- ✅ Tracks decision points with reasoning and alternatives
-- ✅ Records confidence levels for each execution
-- ✅ Logs stored in `project_path/logs/agent_telemetry.jsonl`
-- ✅ Automatic telemetry setup in Orchestrator for all agents
+### ✅ Phase 2: Comprehensive Telemetry Logging
+All agent `execute()` methods are enhanced with thorough telemetry logging:
+- Integrated into `BaseAgent` for consistent data capture.
+- Captures input context, LLM interactions (prompts, raw responses, token usage, cost).
+- Tracks decision points with reasoning and alternatives considered.
+- Records agent-assessed confidence levels for each execution.
+- Telemetry logs are stored in structured JSONL format at `project_path/logs/agent_telemetry.jsonl`.
+- The Orchestrator automatically ensures telemetry is active for all agents.
 
-### ✅ Phase 3: Debrief System (COMPLETED)
-Post-task self-assessment and improvement suggestions:
-- ✅ Comprehensive debrief generation after each agent execution
-- ✅ Self-assessment including confidence analysis and risk identification
-- ✅ Decision quality evaluation and alternative approach suggestions
-- ✅ Lessons learned capture (successes, challenges, improvements)
-- ✅ Future recommendations for similar and follow-up tasks
-- ✅ Structured JSON storage in `project_path/logs/debriefs/`
+### ✅ Phase 3: Post-Task Debrief System
+Agents perform a structured self-assessment after each task execution:
+- Generates a comprehensive debrief analyzing the task's outcome.
+- Includes self-assessment of confidence levels and identification of potential risks or ambiguities.
+- Evaluates the quality of decisions made and suggests alternative approaches considered.
+- Captures lessons learned, including successes, challenges faced, and opportunities for improvement.
+- Provides recommendations for future similar tasks and potential follow-up actions.
+- Debriefs are stored in structured JSON format in `project_path/logs/debriefs/`.
+
+### ✅ Phase 4: Fault Tolerance & Hardening (COMPLETED)
+Strengthened system resilience and error management:
+- ✅ Introduced `ResilientOrchestrator` class with signal handling and partial failure isolation (circuit breaker pattern)
+- ✅ Implemented `SymlinkAwarePathResolver` for safe symlinked project environments
+- ✅ Implemented `TelemetryAwareErrorHandler` for centralized error tracking and recovery strategies
+- ✅ Integrated graceful shutdown (SIGINT/SIGTERM) and execution checkpointing
+
+**Status**: Core self-improvement and fault-tolerance infrastructure complete. The system now features comprehensive telemetry logging, post-execution debriefs, a fault-tolerant orchestrator, and a safe self-modification framework.
 
 ## New Infrastructure Added:
 
@@ -85,6 +95,7 @@ ls ~/.AIMA_CodeGen/projects/SELF_IMPROVE_*/logs/debriefs/
 4. **Process Improvement**: Debriefs suggest concrete improvements
 5. **Transparency**: Full visibility into agent reasoning and choices
 6. **Self-Modification**: Safe framework for system self-improvement
+7. **Fault Tolerance**: Partial failures are contained and recovered without disrupting the overall process (no cascading errors)
 
 ## Next Steps for Future Improvements:
 

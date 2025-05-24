@@ -17,6 +17,20 @@ Returns a dictionary with:
 - `cost`: API call cost
 - `error`: Error message if failed
 
+#### Example Output
+```json
+{
+  "success": true,
+  "waypoints": [
+    {"id": "wp_001", "description": "Initialize project structure", "dependencies": []},
+    {"id": "wp_002", "description": "Implement core features", "dependencies": ["wp_001"]}
+  ],
+  "tokens_used": 1500,
+  "cost": 0.50,
+  "error": null
+}
+```
+
 ## Best Practices
 
 ### 1. Waypoint Decomposition

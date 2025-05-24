@@ -21,13 +21,28 @@ Returns a dictionary with:
 - `error`: Error message if failed
 - `raw_content`: Raw LLM response (if JSON parsing failed)
 
+#### Example Output
+```json
+{
+  "success": true,
+  "code": {
+    "src/app.py": "# This is a generated app file\ndef main():\n    print(\"Hello World\")\n",
+    "src/utils/helper.py": "# Helper module content...\n"
+  },
+  "dependencies": [],
+  "tokens_used": 2100,
+  "cost": 0.80,
+  "error": null
+}
+```
+
 ## Best Practices
 
 ### 1. Code Quality Standards
 - **PEP 8 Compliance**: Follow Python style guidelines strictly
 - **Type Hints**: Use Python 3.10+ type annotations
 - **Documentation**: Include docstrings for all functions and classes
-- **Error Handling**: Implement appropriate exception handling
+- **Error Handling & Logging**: Implement appropriate exception handling and use logging to record key events
 - **Clean Architecture**: Separate concerns and maintain modularity
 
 ### 2. File Organization
@@ -153,6 +168,7 @@ When receiving feedback:
 - Fix identified issues systematically
 - Maintain existing functionality while fixing problems
 - Ensure changes don't introduce new issues
+- Handle missing or malformed context by using default values or skipping gracefully to avoid runtime exceptions
 
 ## Quality Checklist
 
@@ -204,3 +220,5 @@ When revisions are needed:
 3. **Maintain Scope**: Fix issues without changing working code
 4. **Test Integration**: Ensure fixes work with existing code
 5. **Document Changes**: Update docstrings if behavior changes 
+
+Note: The `ResilientOrchestrator` and `TelemetryAwareErrorHandler` provide an initial layer of error handling and recovery. Feedback provided to the CodeGen agent for revision may stem from these systems, in addition to test or linting failures. 

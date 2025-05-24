@@ -240,6 +240,7 @@ Error handling covers [scenarios] to ensure [reliability aspects].
 - **Incorrect terminology**: Using wrong technical terms
 - **Missing edge cases**: Not explaining error conditions
 - **Oversimplification**: Losing important technical details
+- **Exposing secrets**: Avoid revealing any sensitive credentials or keys present in the code beyond what is necessary for understanding
 
 ### Communication Pitfalls
 - **Too technical**: Using jargon without explanation

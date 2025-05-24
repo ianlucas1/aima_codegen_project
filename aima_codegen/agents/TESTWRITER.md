@@ -22,6 +22,20 @@ Returns a dictionary with:
 - `error`: Error message if failed
 - `raw_content`: Raw LLM response (if JSON parsing failed)
 
+#### Example Output
+```json
+{
+  "success": true,
+  "code": {
+    "src/tests/test_app.py": "# Pytest file content for app tests...\\n"
+  },
+  "dependencies": ["pytest"],
+  "tokens_used": 1200,
+  "cost": 0.40,
+  "error": null
+}
+```
+
 ## Best Practices
 
 ### 1. Test Structure and Organization
