@@ -15,6 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Multi-Model Configuration Guide
   - API Reference for all new features
 
+#### 🤖 Self-Improvement System
+- **Bootstrap capability**: New `aima-codegen improve` command enables system self-modification
+- **Agent guide documents**: Comprehensive markdown guides for all agents (PLANNER.md, CODEGEN.md, TESTWRITER.md, REVIEWER.md, EXPLAINER.md)
+- **Telemetry infrastructure**: Complete agent execution logging with decision tracking
+- **Self-assessment system**: Post-task debrief generation with confidence metrics
+- **Safe self-modification**: Symlink-based approach for controlled system updates
+- System successfully used this capability to implement all improvements autonomously
+- Foundation for continuous self-improvement and learning
+
+### Technical Enhancements
+- Enhanced BaseAgent with telemetry logging and debrief generation
+- Added decision point tracking with reasoning capture
+- Implemented confidence level assessment for all agents
+- Created structured JSON logging for agent telemetry
+- Added SYSTEM_IMPROVEMENT.md guide for future enhancements
+
 ### Changed
 - Updated model presets to use frontier models (Claude Opus 4, Gemini Flash, O3)
 - Optimized default agent configurations for cost and performance
